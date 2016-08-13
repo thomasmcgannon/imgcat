@@ -1,4 +1,4 @@
-import glob, os, sys
+import glob, os, sys, tempfile
 from PIL import Image, ImageDraw
 from resizeimage import resizeimage
 
@@ -23,6 +23,7 @@ def add_corners(im, rad):
 
 # Resize images
 inputFiles = list()
+resizedFiles = list()
 for filename in glob.glob(os.path.join(path, '*.jpg')):
  inputFiles.append(filename)
 
@@ -30,14 +31,13 @@ for inputFile in inputFiles:
  original = open(inputFile, 'r')
  origImg = Image.open(original)
  origImg = resizeimage.resize_height(origImg, maxHeight)
- origImg.save(newpath + "/" + str(maxHeight) + "_" + os.path.basename(inputFile), origImg.format, subsampling=0, quality=100)
+ # Save resied image to temp file
+ resizedFile = tempfile.TemporaryFile()
+ origImg.save(resizedFile, origImg.format, subsampling=0, quality=100)
+ resizedFiles.append(resizedFile)
  original.close()
 
-
-# Join images
-resizedFiles = list()
-for filename in glob.glob(os.path.join(newpath, '*.jpg')):
- resizedFiles.append(filename)
+# Join images from temp files
 
 images = map(Image.open, resizedFiles)
 widths, heights = zip(*(i.size for i in images))
@@ -50,6 +50,11 @@ for im in images:
   new_im.paste(im, (x_offset,0))
   x_offset += im.size[0] + seperator
 
+# Close/delete temp files
+for tmp in resizedFiles:
+ tmp.close()
+
+# Save new output file
 new_im.save('output.png','PNG')
 
 print str(totalWidth) + "px wide"
